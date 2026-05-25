@@ -7,13 +7,26 @@ pipeline {
 
     stages {
         stage("build") {
+          when {
+              changeset "**/result/**"
+            }
           steps {
             echo 'Compiling result app'
+            dir('result'){
+                sh 'npm install'
+              }
             }
           }
         stage("test") {
+            when {
+              changeset "**/result/**"
+            }
             steps {
                 echo 'Runing Unit Test on result app'
+                dir('result') {
+                    sh 'npm install'
+                    sh 'npm test'
+                  }
               }
           }
       }
