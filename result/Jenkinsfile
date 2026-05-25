@@ -7,17 +7,11 @@ pipeline {
 
     stages {
         stage("build") {
-            when {
-                changeset "**/result/**"
-              }
           steps {
             echo 'Compiling result app'
             }
           }
         stage("test") {
-            when {
-                changeset "**/result/**"
-              }
             steps {
                 echo 'Runing Unit Test on result app'
               }
