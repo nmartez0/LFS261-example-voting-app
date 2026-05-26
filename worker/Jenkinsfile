@@ -1,17 +1,19 @@
 pipeline {
-    agent any
+    agent none
 
-    tools {
-        maven 'maven 3.9.16'
-      }
-    
     stages {
         stage("build") {
-            when {
+            when{
                 changeset "**/worker/**"
               }
+            agent {
+                docker {
+                    image 'maven:3.9.16-sapmachine-21'
+                    args '-v $HOME/.m2:/root/.m2'
+                  }
+              } 
             steps{
-              echo 'Compiling worker app'
+              echo 'compiling worker app...'
               dir('worker') {
                   sh 'mvn compile'
                 }
@@ -21,6 +23,12 @@ pipeline {
             when{
                 changeset "**/worker/**"
               }
+            agent {
+                docker {
+                    image 'maven:3.9.16-sapmachine-21'
+                    args '-v $HOME/.m2:/root/.m2'
+                  }
+              } 
             steps{
                 echo 'Running Unit Tests on worker app'
                 dir('worker') {
@@ -28,18 +36,41 @@ pipeline {
                   }
               }
           }
-        
         stage("package"){
             when{
                 branch 'master'
                 changeset "**/worker/**"
               }
+            agent {
+                docker {
+                    image 'maven:3.9.16-sapmachine-21'
+                    args '-v $HOME/.m2:/root/.m2'
+                  }
+              } 
             steps{
-                echo 'Packaging worker app'
+                echo 'Packaging worker app into a jarfile'
                 dir('worker'){
                   sh 'mvn package -DskipTests'
                   archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
                 }
+              }
+          }
+        stage("docker-package"){
+            agent any
+            when{
+                branch 'master'
+                changeset "**/worker/**"
+              }
+            steps{
+                echo 'Packaging worker app with docker'
+                script{
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin'){
+                        def workerImage = docker.build('nmartez0/worker:v${env.BUILD_ID}', './worker')
+                        workerImage.push()
+                        workerImage.push('${env.BRANCH_NAME}')
+                        workerImage.push('latest')
+                      }
+                  }
               }
           }
       }
