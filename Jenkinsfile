@@ -78,7 +78,7 @@ pipeline {
             agent any
 
             tools {
-              'NodeJS 22.4.0'
+              nodejs 'NodeJS 22.4.0'
             }
 
             when {
@@ -95,7 +95,7 @@ pipeline {
             agent any
 
             tools {
-              'NodeJS 22.4.0'
+              nodejs 'NodeJS 22.4.0'
             }
 
             when {
@@ -171,10 +171,10 @@ pipeline {
             }
         }
 
-        post {
-            always {
-                echo 'Building multibranch pipeline for worker is completed.'
-            }
-        }
+    }
+    post {
+      always {
+        echo 'Building multibranch pipeline for worker is completed.'
+      }
     }
 }
