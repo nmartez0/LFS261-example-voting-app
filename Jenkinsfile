@@ -75,11 +75,11 @@ pipeline {
         }
 
         stage('Result: build') {
-            agent any
-
-            tools {
-              nodejs 'NodeJS 22.4.0'
-            }
+            agent {
+                docker {
+                    image 'node:22.4.1-alpine'
+                }
+            } 
 
             when {
                 changeset '**/result/**'
@@ -92,11 +92,11 @@ pipeline {
             }
         }
         stage('Result: test') {
-            agent any
-
-            tools {
-              nodejs 'NodeJS 22.4.0'
-            }
+            agent {
+                docker {
+                    image 'node:22.4.1-alpine'
+                }
+            } 
 
             when {
                 changeset '**/result/**'
@@ -109,6 +109,24 @@ pipeline {
                 }
             }
         }
+        stage('result-docker-package') {
+          agent any
+          when {
+              changeset '**/result/**'
+              branch 'master'
+            }
+          steps {
+              echo 'Packaging result app with docker'
+              script {
+                  docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
+                      def resultImage = docker.build("nmartez0/result:v${env.BUILD_ID}", './result')
+                      resultImage.push()
+                      resultImage.push("${env.BRANCH_NAME}")
+                      resultImage.push('latest')
+                  }
+              }
+          }
+
         stage('Vote: build') {
             agent {
                 docker {
@@ -149,6 +167,21 @@ pipeline {
             }
         }
 
+        stage('Vote: Integration') {
+            agent any
+            when {
+                changeset '**/vote/**'
+                branch 'master'
+              }
+            steps {
+                echo 'Running Integration Tests on vote app'
+                dir('vote'){
+                    sh 'sh integration_test.sh'
+                  }
+              }
+        }
+
+
         stage('Vote: docker-package') {
             agent any
 
@@ -170,11 +203,22 @@ pipeline {
                 }
             }
         }
-
+        
+        stage('deploy to dev'){
+            agent any
+            when {
+                branch 'master'
+              }
+            steps{
+                echo 'Deploy instavote app with docker compose'
+                sh 'docker compose up -d'
+              }
+          }
     }
+
     post {
       always {
-        echo 'Building multibranch pipeline for worker is completed.'
+        echo 'Building mono pipeline for vote app is completed.'
       }
     }
 }
