@@ -79,7 +79,7 @@ pipeline {
                 docker {
                     image 'node:22.4.1-alpine'
                 }
-            } 
+            }
 
             when {
                 changeset '**/result/**'
@@ -96,7 +96,7 @@ pipeline {
                 docker {
                     image 'node:22.4.1-alpine'
                 }
-            } 
+            }
 
             when {
                 changeset '**/result/**'
@@ -109,116 +109,10 @@ pipeline {
                 }
             }
         }
-        stage('result-docker-package') {
-          agent any
-          when {
-              changeset '**/result/**'
-              branch 'master'
-            }
-          steps {
-              echo 'Packaging result app with docker'
-              script {
-                  docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
-                      def resultImage = docker.build("nmartez0/result:v${env.BUILD_ID}", './result')
-                      resultImage.push()
-                      resultImage.push("${env.BRANCH_NAME}")
-                      resultImage.push('latest')
-                  }
-              }
-          }
-
-        stage('Vote: build') {
-            agent {
-                docker {
-                    image 'python:3.11-slim'
-                    args '--user root'
-                }
-            }
-            
-            when {
-                changeset '**/vote/**'
-            }
-
-            steps {
-                echo 'Compiling vote app.'
-                dir('vote') {
-                    sh 'pip install -r requirements.txt'
-                }
-            }
-        }
-        stage('Vote: test') {
-            agent {
-                docker {
-                    image 'python:3.11-slim'
-                    args '--user root'
-                }
-            }
-
-            when {
-                changeset '**/vote/**'
-            }
-
-            steps {
-                echo 'Running Unit Tests on vote app.'
-                dir('vote') {
-                    sh 'pip install -r requirements.txt'
-                    sh 'nosetests -v'
-                }
-            }
-        }
-
-        stage('Vote: Integration') {
-            agent any
-            when {
-                changeset '**/vote/**'
-                branch 'master'
-              }
-            steps {
-                echo 'Running Integration Tests on vote app'
-                dir('vote'){
-                    sh 'sh integration_test.sh'
-                  }
-              }
-        }
-
-
-        stage('Vote: docker-package') {
-            agent any
-
-            when {
-                branch 'master'
-                changeset '**/vote/**'
-              }
-
-            steps {
-                echo 'Packaging vote app with docker'
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
-                        // ./vote is the path to the Dockerfile that Jenkins will find from the Github repo
-                        def voteImage = docker.build("xxxx/vote:v${env.BUILD_ID}", './vote')
-                        voteImage.push()
-                        //voteImage.push("${env.BRANCH_NAME}")
-                        voteImage.push('latest')
-                    }
-                }
-            }
-        }
-        
-        stage('deploy to dev'){
-            agent any
-            when {
-                branch 'master'
-              }
-            steps{
-                echo 'Deploy instavote app with docker compose'
-                sh 'docker compose up -d'
-              }
-          }
     }
-
     post {
-      always {
-        echo 'Building mono pipeline for vote app is completed.'
-      }
+        always {
+            echo 'Building mono pipeline for vote app is completed.'
+        }
     }
 }
