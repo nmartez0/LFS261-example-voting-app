@@ -77,7 +77,9 @@ pipeline {
         stage('Result: build') {
             agent any
 
-            tool 'NodeJS 22.4.0'
+            tools {
+              'NodeJS 22.4.0'
+            }
 
             when {
                 changeset '**/result/**'
@@ -92,7 +94,9 @@ pipeline {
         stage('Result: test') {
             agent any
 
-            tool 'NodeJS 22.4.0'
+            tools {
+              'NodeJS 22.4.0'
+            }
 
             when {
                 changeset '**/result/**'
@@ -112,6 +116,10 @@ pipeline {
                     args '--user root'
                 }
             }
+            
+            when {
+                changeset '**/vote/**'
+            }
 
             steps {
                 echo 'Compiling vote app.'
@@ -127,6 +135,11 @@ pipeline {
                     args '--user root'
                 }
             }
+
+            when {
+                changeset '**/vote/**'
+            }
+
             steps {
                 echo 'Running Unit Tests on vote app.'
                 dir('vote') {
@@ -138,6 +151,11 @@ pipeline {
 
         stage('Vote: docker-package') {
             agent any
+
+            when {
+                branch 'master'
+                changeset '**/vote/**'
+              }
 
             steps {
                 echo 'Packaging vote app with docker'
