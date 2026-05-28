@@ -122,7 +122,7 @@ pipeline {
 
           steps {
                 echo 'Running Sonarqube Analysis..'
-                withSonarQubeEnv(credentialsId: 'sonar-instavote') {
+                withSonarQubeEnv(installationName: 'sonar-instavote', credentialsId: 'sonar-instavote') {
                   sh "${sonarpath}/bin/sonar-scanner -Dproject.settings=sonar-project.properties -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=86400"
                 }
           }
