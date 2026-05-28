@@ -65,9 +65,9 @@ pipeline {
                 echo 'Packaging worker app with docker'
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
-                        def workerImage = docker.build('nmartez0/worker:v${env.BUILD_ID}', './worker')
+                        def workerImage = docker.build("nmartez0/worker:v${env.BUILD_ID}", './worker')
                         workerImage.push()
-                        // workerImage.push('build-${env.BUILD_ID}')
+                        workerImage.push("build-${env.BRANCH_NAME}")
                         workerImage.push('latest')
                     }
                 }
@@ -108,6 +108,92 @@ pipeline {
                     sh 'npm test'
                 }
             }
+        }
+
+        stage('Result: docker-package') {
+          agent any
+          when {
+            changeset '**/result/**'
+            branch 'master'
+          }
+          steps {
+            echo 'Packaging result app with docker'
+            script {
+              docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
+                def resultImage = docker.build("xxxxx/result:v${env.BUILD_ID}", './result')
+                resultImage.push()
+                resultImage.push("${env.BRANCH_NAME}")
+                resultImage.push('latest')
+              }
+            }
+          }
+        }
+
+        stage('Vote: build') {
+          agent {
+            docker {
+              image 'python:3.11-slim'
+              args '--user root'
+            }
+          }
+          when {
+            changeset '**/vote/**'
+          }
+          steps {
+            echo 'Compiling vote app.'
+            dir(path: 'vote') {
+              sh 'pip install -r requirements.txt'
+            }
+          }
+        }
+
+        stage('Vote: test') {
+          agent {
+            docker {
+              image 'python:3.11-slim'
+              args '--user root'
+            }
+          }
+          when {
+            changeset '**/vote/**'
+          }
+          steps {
+            echo 'Running Unit Tests on vote app.'
+            dir(path: 'vote') {
+              sh 'pip install -r requirements.txt'
+              sh 'nosetests -v'
+            }
+          }
+        }
+
+        stage('Vote: integration'){
+            agent any
+            when{
+                changeset "**/vote/**"
+                branch 'master'
+            }
+            steps{
+                echo 'Running Integration Tests on vote app'
+                dir('vote'){
+                    sh 'sh integration_test.sh'
+                }
+            }
+        }
+
+        stage('vote-docker-package') {
+          agent any
+          steps {
+            echo 'Packaging vote app with docker'
+            script {
+              docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
+                // ./vote is the path to the Dockerfile that Jenkins will find from the Github repo
+                def voteImage = docker.build("xxxxx/vote:${env.GIT_COMMIT}", "./vote")
+                voteImage.push()
+                voteImage.push("${env.BRANCH_NAME}")
+                voteImage.push("latest")
+              }
+            }
+          }
         }
 
         stage('Sonarqube') {
